@@ -3,12 +3,15 @@ import time
 import csv
 import datetime
 import requests
+import dotenv
 
-# --- CONFIG ---
-AUDD_API_TOKEN = "9e28242c6260d5b332762aa0fa9f30d6"  # Replace with your key
-STREAM_URL = "https://mmg.streamguys1.com/HitzFM-mp3?aw_0_req.gdpr=true?us_privacy=1YYN"
-STATION_NAME = "Hitz FM"
-ghanaian_artists = {"Sarkodie", "Stonebwoy", "Shatta Wale", "King Promise", "Efya", "Kuami Eugene"}
+dotenv.load_dotenv()
+
+# --- CONSTANTS ---
+STREAM_URL = os.getenv("STREAM_URL")
+STATION_NAME = os.getenv("STATION_NAME")
+AUDD_API_TOKEN = os.getenv("AUDD_API_TOKEN")
+ghanaian_artists = os.getenv("GHANAIAN_ARTISTS_FILE").split(",")
 
 # --- FUNCTIONS ---
 
@@ -17,7 +20,6 @@ def record_stream(duration=30):
     filename = f"recordings/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.mp3"
     os.system(f'ffmpeg -y -i "{STREAM_URL}" -t {duration} -acodec copy {filename}')
     return filename
-
 def identify_song(file_path):
     """Send file to Audd.io for recognition"""
     try:
@@ -30,6 +32,7 @@ def identify_song(file_path):
     except Exception as e:
         print("Error identifying song:", e)
         return None
+
 
 def classify_song(artist):
     """Classify song as Local or Foreign"""
