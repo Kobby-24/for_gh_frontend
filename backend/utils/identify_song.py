@@ -14,7 +14,7 @@ AUDD_API_TOKEN = os.getenv("AUDD_API_TOKEN")
 ghanaian_artists = os.getenv("GHANAIAN_ARTISTS_FILE").split(",")
 
 
-def identify_song(file_path):
+def identify_song(file_path: str):
     """Send file to Audd.io for recognition"""
     try:
         with open(file_path, "rb") as f:
@@ -26,3 +26,7 @@ def identify_song(file_path):
     except Exception as e:
         print("Error identifying song:", e)
         return None
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+

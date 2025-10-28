@@ -1,69 +1,36 @@
-import os
-import time
-import csv
-import datetime
-import requests
-import dotenv
+# app/main.py
+from fastapi import FastAPI
+from apscheduler.schedulers.background import BackgroundScheduler
+from database import SessionLocal
+import models
+from utils import scan_station
 
-dotenv.load_dotenv()
+app = FastAPI()
 
-# --- CONSTANTS ---
-STREAM_URL = os.getenv("STREAM_URL")
-STATION_NAME = os.getenv("STATION_NAME")
-AUDD_API_TOKEN = os.getenv("AUDD_API_TOKEN")
-ghanaian_artists = os.getenv("GHANAIAN_ARTISTS_FILE").split(",")
-
-# --- FUNCTIONS ---
-
-def record_stream(duration=30):
-    """Record audio snippet from radio stream"""
-    filename = f"recordings/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.mp3"
-    os.system(f'ffmpeg -y -i "{STREAM_URL}" -t {duration} -acodec copy {filename}')
-    return filename
-def identify_song(file_path):
-    """Send file to Audd.io for recognition"""
+def scan_all_stations():
+    """Fetches all stations from DB and runs the scanner for each."""
+    print("--- Starting scheduled scan ---")
+    db = SessionLocal()
     try:
-        with open(file_path, "rb") as f:
-            data = {"api_token": AUDD_API_TOKEN, "return": "spotify,timecode"}
-            files = {"file": f}
-            result = requests.post("https://api.audd.io/", data=data, files=files)
-            response = result.json()
-            return response.get("result")
-    except Exception as e:
-        print("Error identifying song:", e)
-        return None
+        stations = db.query(models.Station).all()
+        if not stations:
+            print("No stations found in the database. Add a station to begin scanning.")
+            return
+            
+        for station in stations:
+            scan_station(db, station)
+    finally:
+        db.close()
+    print("--- Scheduled scan finished ---")
 
+@app.on_event("startup")
+def start_scheduler():
+    scheduler = BackgroundScheduler()
+    # Schedule the job to run every 60 seconds
+    scheduler.add_job(scan_all_stations, 'interval', seconds=60)
+    scheduler.start()
+    print("Scheduler started. First scan will run shortly.")
 
-def classify_song(artist):
-    """Classify song as Local or Foreign"""
-    if artist and artist.strip().title() in ghanaian_artists:
-        return "Local"
-    return "Foreign"
-
-def log_result(station, title, artist, origin):
-    """Save to CSV"""
-    with open("log.csv", "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow([datetime.datetime.now(), station, title, artist, origin])
-
-# --- MAIN LOOP ---
-def main():
-    while True:
-        print("Recording...")
-        file = record_stream(duration=30)
-        print("Detecting song...")
-        song_info = identify_song(file)
-
-        if song_info:
-            title = song_info.get("title", "Unknown")
-            artist = song_info.get("artist", "Unknown")
-            origin = classify_song(artist)
-            log_result(STATION_NAME, title, artist, origin)
-            print(f"{title} by {artist} → {origin}")
-        else:
-            print("No song detected.")
-
-        time.sleep(60)  # Wait 1 min before next scan
-
-if __name__ == "__main__":
-    main()
+@app.get("/")
+def read_root():
+    return {"message": "Radio Scanner API is running."}

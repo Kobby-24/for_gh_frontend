@@ -1,15 +1,19 @@
-import os
-import time
-import csv
+from sqlalchemy.orm import Session
+import models
 import datetime
-import requests
-import dotenv
-
-dotenv.load_dotenv()
+from artists import get_or_create_artist
 
 
-def log_result(station, title, artist, origin):
-    """Save to CSV"""
-    with open("log.csv", "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow([datetime.datetime.now(), station, title, artist, origin])
+def log_song_play(db: Session, station: models.Station, title: str, artist_name: str):
+    """Saves the identified song to the song_plays table."""
+    artist = get_or_create_artist(db, artist_name)
+    
+    new_play = models.SongPlay(
+        station_id=station.id,
+        artist_id=artist.id,
+        title=title,
+        played_at=datetime.datetime.utcnow()
+    )
+    db.add(new_play)
+    db.commit()
+    print(f"Logged: {title} by {artist.name} ({artist.origin}) on {station.name}")
