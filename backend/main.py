@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from database import SessionLocal
 import models
 from utils import scan_station
-from routers import stations
+from routers import stations, users
 
 
 
@@ -13,6 +13,7 @@ app = FastAPI()
 
 
 app.include_router(stations.router)
+app.include_router(users.router)
 
 # def scan_all_stations():
 #     """Fetches all station IDs and runs the scanner for each concurrently."""

@@ -33,6 +33,8 @@ class Users(Base):
     email = Column(String, unique=True, index=True)
     password = Column(String)
     role = Column(String)
+    station_id = Column(Integer, ForeignKey("stations.id"))
+    station = relationship("Stations")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     last_login = Column(DateTime)

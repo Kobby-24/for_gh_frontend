@@ -4,6 +4,21 @@ from pydantic import BaseModel
 class Station(BaseModel):
     name: str
     url: str
+    base_tax: float
+
+class GetStation(Station):
+    name: str  
+
+
+class Payment(BaseModel):
+    user_id: int
+    amount: float
+    payment_date: datetime
+    method: str
+    status: str
+    foreign_percentage: float
+    local_percentage: float
+
 
 class Artist(BaseModel):
     name: str
@@ -23,6 +38,12 @@ class User(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_login: datetime
+    station: GetStation | None = None
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
 
 class Token(BaseModel):
     access_token: str

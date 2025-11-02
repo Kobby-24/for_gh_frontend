@@ -4,7 +4,23 @@ from datetime import datetime
 from typing import List
 from database import SessionLocal
 import models
+from schemas import Station
 
+
+def create_station(station: Station):
+    db = SessionLocal()
+    existing_station = (
+        db.query(models.Stations)
+        .filter(models.Stations.name == station.name)
+        .first()
+    )
+    if existing_station:
+        raise HTTPException(status_code=400, detail="Station with this name already exists")
+    new_station = models.Stations(
+        name=station.name, url=station.url, base_tax=station.base_tax
+    )
+    db.add(new_station)
+    db.commit() 
 
 def format_iso(dt):
     return dt.isoformat() if dt else None
