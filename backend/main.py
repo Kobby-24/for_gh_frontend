@@ -5,40 +5,45 @@ from concurrent.futures import ThreadPoolExecutor
 from database import SessionLocal
 import models
 from utils import scan_station
+from routers import stations
+
+
 
 app = FastAPI()
 
 
-def scan_all_stations():
-    """Fetches all station IDs and runs the scanner for each concurrently."""
-    print("--- Starting concurrent scheduled scan ---")
-    db = SessionLocal()
-    try:
-        # We only need the station IDs to pass to the threads
-        station_ids = [s.id for s in db.query(models.Stations.id).all()]
+app.include_router(stations.router)
 
-        if not station_ids:
-            print("No stations found in the database. Add a station to begin scanning.")
-            return
+# def scan_all_stations():
+#     """Fetches all station IDs and runs the scanner for each concurrently."""
+#     print("--- Starting concurrent scheduled scan ---")
+#     db = SessionLocal()
+#     try:
+#         # We only need the station IDs to pass to the threads
+#         station_ids = [s.id for s in db.query(models.Stations.id).all()]
 
-        # Use a ThreadPoolExecutor to run scans for all stations at the same time
-        with ThreadPoolExecutor(max_workers=len(station_ids)) as executor:
-            print(station_ids)
-            # executor.map will call scan_station.scan_station for each id in station_ids
-            executor.map(scan_station.scan_station, station_ids)
+#         if not station_ids:
+#             print("No stations found in the database. Add a station to begin scanning.")
+#             return
 
-    finally:
-        db.close()
-    print("--- Concurrent scheduled scan finished ---")
+#         # Use a ThreadPoolExecutor to run scans for all stations at the same time
+#         with ThreadPoolExecutor(max_workers=len(station_ids)) as executor:
+#             print(station_ids)
+#             # executor.map will call scan_station.scan_station for each id in station_ids
+#             executor.map(scan_station.scan_station, station_ids)
+
+#     finally:
+#         db.close()
+#     print("--- Concurrent scheduled scan finished ---")
 
 
-@app.on_event("startup")
-def start_scheduler():
-    scheduler = BackgroundScheduler()
-    # Schedule the job to run every 60 seconds
-    scheduler.add_job(scan_all_stations, "interval", seconds=60)
-    scheduler.start()
-    print("Scheduler started. First scan will run shortly.")
+# @app.on_event("startup")
+# def start_scheduler():
+#     scheduler = BackgroundScheduler()
+#     # Schedule the job to run every 60 seconds
+#     scheduler.add_job(scan_all_stations, "interval", seconds=60)
+#     scheduler.start()
+#     print("Scheduler started. First scan will run shortly.")
 
 
 @app.get("/")

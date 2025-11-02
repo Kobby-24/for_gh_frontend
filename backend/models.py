@@ -8,6 +8,7 @@ class Stations(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     url = Column(String, unique=True, index=True)
+    base_tax = Column(Float)
 
 class Artists(Base):
     __tablename__ = "artists"
@@ -35,4 +36,16 @@ class Users(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     last_login = Column(DateTime)
+
+class Payments(Base):
+    __tablename__ = "payments"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    amount = Column(Float)
+    payment_date = Column(DateTime, default=datetime.now)
+    method = Column(String)
+    status = Column(String)
+    foreign_percentage = Column(Float)
+    local_percentage = Column(Float)
+    user = relationship("Users")
     

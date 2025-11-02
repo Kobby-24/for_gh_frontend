@@ -1,0 +1,142 @@
+from fastapi import HTTPException
+from sqlalchemy import func, case
+from datetime import datetime
+from typing import List
+from database import SessionLocal
+import models
+
+
+def format_iso(dt):
+    return dt.isoformat() if dt else None
+
+
+def get_station_export(station_id: int):
+    db = SessionLocal()
+    try:
+        station = db.get(models.Stations, station_id)
+        if not station:
+            raise HTTPException(status_code=404, detail="Station not found")
+
+        # Recent contentLog (limit to N latest plays)
+        rows = (
+            db.query(
+                models.SongPlays.played_at,
+                models.SongPlays.title,
+                models.Artists.name.label("artist"),
+                models.Artists.origin,
+            )
+            .join(models.Artists, models.SongPlays.artist_id == models.Artists.id)
+            .filter(models.SongPlays.station_id == station_id)
+            .order_by(models.SongPlays.played_at.desc())
+            .limit(200)
+            .all()
+        )
+        content_log = [
+            {
+                "timestamp": format_iso(r.played_at),
+                "title": r.title,
+                "artist": r.artist,
+                "origin": r.origin,
+            }
+            for r in rows
+        ]
+
+        # Monthly historical aggregates (periodId 'YYYY-MM') — Postgres uses to_char
+        period_expr = func.to_char(models.SongPlays.played_at, "YYYY-MM").label(
+            "periodId"
+        )
+
+        period_agg = (
+            db.query(
+                period_expr,
+                func.count().label("total"),
+                func.sum(case((models.Artists.origin == "Foreign", 1), else_=0)).label(
+                    "foreign_count"
+                ),
+                func.max(models.SongPlays.played_at).label("paid_on_candidate"),
+            )
+            .join(models.Artists, models.SongPlays.artist_id == models.Artists.id)
+            .filter(models.SongPlays.station_id == station_id)
+            .group_by(period_expr)
+            .order_by(period_expr.desc())
+            .all()
+        )
+
+        historical = []
+        for p in period_agg:
+            total = p.total or 0
+            foreign = p.foreign_count or 0
+            foreign_pct = (foreign / total * 100) if total else 0.0
+
+            # example business logic for surcharge/totalTax (replace with your rules)
+            surcharge = round(max(0, (foreign_pct - 30.0) * 10.0), 2)  # placeholder
+            total_tax = float(station.base_tax or 0) + surcharge
+
+            # fetch full contentLog for this period
+            period_start = f"{p.periodId}-01"
+            rows_period = (
+                db.query(
+                    models.SongPlays.played_at,
+                    models.SongPlays.title,
+                    models.Artists.name.label("artist"),
+                    models.Artists.origin,
+                )
+                .join(models.Artists)
+                .filter(models.SongPlays.station_id == station_id)
+                .filter(
+                    func.to_char(models.SongPlays.played_at, "YYYY-MM") == p.periodId
+                )
+                .order_by(models.SongPlays.played_at)
+                .all()
+            )
+            content_period = [
+                {
+                    "timestamp": format_iso(r.played_at),
+                    "title": r.title,
+                    "artist": r.artist,
+                    "origin": r.origin,
+                }
+                for r in rows_period
+            ]
+
+            historical.append(
+                {
+                    "period": datetime.strptime(
+                        p.periodId + "-01", "%Y-%m-%d"
+                    ).strftime("%B %Y"),
+                    "periodId": p.periodId,
+                    "status": "Paid" if p.paid_on_candidate else "Due",  # example
+                    "summary": {
+                        "foreignPercentage": round(foreign_pct, 2),
+                        "surcharge": surcharge,
+                        "totalTax": total_tax,
+                        "paidOn": (
+                            format_iso(p.paid_on_candidate)
+                            if p.paid_on_candidate
+                            else None
+                        ),
+                    },
+                    "contentLog": content_period,
+                }
+            )
+
+        response = {
+            "id": station.id,
+            "name": station.name,
+            "streamUrl": station.url,
+            "baseTax": station.base_tax,
+            "contentLog": content_log,
+            "historicalRecords": historical,
+        }
+        return response
+    finally:
+        db.close()
+
+
+def get_all_stations():
+    db = SessionLocal()
+    try:
+        stations = db.query(models.Stations).all()
+        return [get_station_export(s.id) for s in stations]
+    finally:
+        db.close()
