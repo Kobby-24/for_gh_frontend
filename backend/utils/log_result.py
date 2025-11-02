@@ -1,14 +1,14 @@
 from sqlalchemy.orm import Session
 import models
 import datetime
-from artists import get_or_create_artist
+from .artists import get_or_create_artist
 
 
-def log_song_play(db: Session, station: models.Station, title: str, artist_name: str):
+def log_song_play(db: Session, station: models.Stations, title: str, artist_name: str):
     """Saves the identified song to the song_plays table."""
     artist = get_or_create_artist(db, artist_name)
     
-    new_play = models.SongPlay(
+    new_play = models.SongPlays(
         station_id=station.id,
         artist_id=artist.id,
         title=title,

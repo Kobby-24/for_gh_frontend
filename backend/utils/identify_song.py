@@ -11,7 +11,6 @@ dotenv.load_dotenv()
 STREAM_URL = os.getenv("STREAM_URL")
 STATION_NAME = os.getenv("STATION_NAME")
 AUDD_API_TOKEN = os.getenv("AUDD_API_TOKEN")
-ghanaian_artists = os.getenv("GHANAIAN_ARTISTS_FILE").split(",")
 
 
 def identify_song(file_path: str):
@@ -22,6 +21,7 @@ def identify_song(file_path: str):
             files = {"file": f}
             result = requests.post("https://api.audd.io/", data=data, files=files)
             response = result.json()
+            print("Audd.io response:", response)
             return response.get("result")
     except Exception as e:
         print("Error identifying song:", e)
