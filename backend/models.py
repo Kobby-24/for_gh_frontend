@@ -37,7 +37,7 @@ class Users(Base):
     station = relationship("Stations")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    last_login = Column(DateTime)
+    last_login = Column(DateTime, default=datetime.now)
 
 class Payments(Base):
     __tablename__ = "payments"

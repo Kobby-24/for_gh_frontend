@@ -6,7 +6,7 @@ class Station(BaseModel):
     url: str
     base_tax: float
 
-class GetStation(Station):
+class GetStation(BaseModel):
     name: str  
 
 
@@ -30,20 +30,24 @@ class SongPlay(BaseModel):
     artist: Artist
     station: Station
 
-class User(BaseModel):
+
+    
+
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+class UserResponse(UserLogin):
     username: str
     email: str
-    password: str
     role: str
     created_at: datetime
     updated_at: datetime
     last_login: datetime
     station: GetStation | None = None
-
-class UserLogin(BaseModel):
-    username: str
+    
+class User(UserResponse):
     password: str
-
 
 class Token(BaseModel):
     access_token: str

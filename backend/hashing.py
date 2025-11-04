@@ -1,11 +1,12 @@
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 
+class Hash: 
+    ph = PasswordHash.recommended()
+    @staticmethod
+    def bcrypt(password: str) -> str:
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        return Hash.ph.hash(password)
 
-# Hashing utility class for password hashing
-class Hash():
-    def bcrypt(self, password: str) -> str:
-        return pwd_context.hash(password)
-    def verify(self, hashed_password: str, plain_password: str) -> bool:
-        return pwd_context.verify(plain_password, hashed_password)
+    @staticmethod
+    def verify(hashed_password: str, plain_password: str) -> bool:
+        return Hash.ph.verify(plain_password, hashed_password)
