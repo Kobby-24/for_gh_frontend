@@ -7,7 +7,8 @@ class Station(BaseModel):
     base_tax: float
 
 class GetStation(BaseModel):
-    name: str  
+    model_config = {"from_attributes": True}
+    id: int  
 
 
 class Payment(BaseModel):
@@ -37,7 +38,8 @@ class SongPlay(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
-class UserResponse(UserLogin):
+class UserResponse(BaseModel):
+    model_config = {"from_attributes": True}
     username: str
     email: str
     role: str
@@ -45,8 +47,15 @@ class UserResponse(UserLogin):
     updated_at: datetime
     last_login: datetime
     station: GetStation | None = None
+
+
     
-class User(UserResponse):
+    
+class User(BaseModel):
+    username: str
+    email: str
+    role: str
+    station: int | None = None
     password: str
 
 class Token(BaseModel):
